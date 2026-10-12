@@ -1,6 +1,28 @@
 # Meetly 📹
 
-A real-time video conferencing web application built with **React**, **Node.js**, **Express**, **Socket.IO**, **WebRTC**, and **MongoDB**.
+A real-time, browser-based video conferencing web application designed for seamless peer-to-peer communication, collaboration, and instant meetings.
+
+---
+
+## 📌 About Meetly
+
+**Meetly** enables users to initiate and participate in video conferences without friction. Powered by WebRTC and Socket.IO, it delivers low-latency media streaming and synchronized group messaging directly in the browser—with support for both guest access and authenticated user accounts.
+
+### ✨ Key Features
+- **🎥 Real-Time Video & Audio**: Peer-to-peer audio/video streaming via WebRTC with camera and microphone toggles.
+- **🖥️ Screen Sharing**: Broadcast your screen or presentation window with one click.
+- **💬 In-Call Live Chat**: Instant messaging during active meetings with unread message badges.
+- **👥 Flexible Joining**: Join meetings instantly with a room code as a guest, or create an account for full features.
+- **🔐 User Authentication**: Secure sign-up/login with bcrypt-hashed passwords and token-based sessions.
+- **📜 Meeting History**: Automatically log and review past meeting codes and session dates.
+
+---
+
+## 🛠️ Tech Stack
+
+- **Frontend**: React (v18), Material UI (MUI), React Router (v6), Socket.IO Client, Axios
+- **Backend**: Node.js, Express, Socket.IO, Mongoose, Bcrypt, Dotenv
+- **Protocols & Database**: WebRTC, WebSockets, MongoDB
 
 ---
 
@@ -66,7 +88,7 @@ npm run dev
 ```
 
 ### 2. Frontend Setup
-In a new terminal:
+In a separate terminal:
 ```bash
 cd frontend
 npm install
