@@ -1,50 +1,79 @@
-# Meetly
+# Meetly 📹
 
-Meetly is a full-stack web application featuring video conferencing and real-time communication.
+A real-time video conferencing web application built with **React**, **Node.js**, **Express**, **Socket.IO**, **WebRTC**, and **MongoDB**.
 
-## Project Structure
-- `frontend`: React-based frontend.
-- `backend`: Node.js/Express backend with Socket.io and MongoDB.
+---
 
-## Getting Started
+## 📁 Repository Structure
 
-### Prerequisites
-- Node.js installed
-- MongoDB database (local or Atlas)
+```text
+meetly/
+├── backend/
+│   ├── src/
+│   │   ├── controllers/
+│   │   │   ├── socketManager.js       # WebRTC signaling & real-time chat logic
+│   │   │   └── user.controller.js     # Auth & meeting history handlers
+│   │   ├── models/
+│   │   │   ├── meeting.model.js       # Meeting history schema
+│   │   │   └── user.model.js          # User schema
+│   │   ├── routes/
+│   │   │   └── users.routes.js        # API endpoints (/login, /register, etc.)
+│   │   └── app.js                     # Server entry point & Socket.IO initialization
+│   ├── .env.example                   # Environment variable template
+│   ├── .gitignore
+│   └── package.json
+│
+├── frontend/
+│   ├── public/                        # Static assets (HTML, icons, images)
+│   ├── src/
+│   │   ├── contexts/
+│   │   │   └── AuthContext.jsx        # Auth state management & API client
+│   │   ├── pages/
+│   │   │   ├── landing.jsx            # Landing page (Join as guest / Login)
+│   │   │   ├── authentication.jsx     # Sign In & Sign Up forms
+│   │   │   ├── home.jsx               # Dashboard to join/create meetings
+│   │   │   ├── history.jsx            # User's meeting history
+│   │   │   └── VideoMeet.jsx          # Video conference room (WebRTC + Chat)
+│   │   ├── styles/                    # Component CSS modules
+│   │   ├── utils/                     # Route guards (withAuth)
+│   │   ├── App.js                     # Route definitions
+│   │   └── environment.js             # API base URL configuration
+│   ├── .gitignore
+│   └── package.json
+│
+├── .gitignore
+├── LICENSE
+└── README.md
+```
 
-### Backend Setup
-1. Navigate to the backend directory:
-   ```bash
-   cd backend
-   ```
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Set up environment variables:
-   Ensure there is a `.env` file in the `backend` directory containing your MongoDB URI:
-   ```env
-   MONGO_URI="your_mongodb_connection_string"
-   ```
-4. Start the server:
-   ```bash
-   npm run dev
-   ```
-   The backend will run on port 8000.
+---
 
-### Frontend Setup
-1. Navigate to the frontend directory:
-   ```bash
-   cd frontend
-   ```
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Start the React development server:
-   ```bash
-   npm start
-   ```
+## ⚡ Quick Start
 
-## License
-[MIT License](LICENSE)
+### 1. Backend Setup
+```bash
+cd backend
+npm install
+```
+Create a `.env` file in `backend/` (refer to `.env.example`):
+```env
+MONGO_URI=your_mongodb_connection_string
+PORT=8000
+```
+Run the server:
+```bash
+npm run dev
+```
+
+### 2. Frontend Setup
+In a new terminal:
+```bash
+cd frontend
+npm install
+npm start
+```
+
+---
+
+## 📄 License
+This project is licensed under the [MIT License](LICENSE).
