@@ -1,11 +1,12 @@
 .landingPageContainer {
   width: 100vw;
   height: 100vh;
-  background: url("/public/background.png");
+  background: url("/background.png");
   background-repeat: no-repeat;
   background-size: cover;
   color: white;
 }
+
 
 .landingPageContainer nav {
   padding-inline: 1.2rem;

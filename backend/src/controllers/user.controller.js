@@ -8,7 +8,7 @@ const login = async (req, res) => {
     const { username, password } = req.body;
 
     if (!username || !password) {
-        return res.status(400).json({ message: "Please provide username and password" });
+        return res.status(httpStatus.BAD_REQUEST).json({ message: "Please provide username and password" });
     }
 
     try {
@@ -16,9 +16,13 @@ const login = async (req, res) => {
             .from("users")
             .select("*")
             .eq("username", username)
-            .single();
+            .maybeSingle();
 
-        if (error || !user) {
+        if (error) {
+            return res.status(httpStatus.INTERNAL_SERVER_ERROR).json({ message: error.message });
+        }
+
+        if (!user) {
             return res.status(httpStatus.NOT_FOUND).json({ message: "User Not Found" });
         }
 
@@ -30,15 +34,19 @@ const login = async (req, res) => {
 
         const token = crypto.randomBytes(20).toString("hex");
 
-        await supabase
+        const { error: updateError } = await supabase
             .from("users")
             .update({ token })
             .eq("username", username);
 
+        if (updateError) {
+            return res.status(httpStatus.INTERNAL_SERVER_ERROR).json({ message: updateError.message });
+        }
+
         return res.status(httpStatus.OK).json({ token });
 
     } catch (e) {
-        return res.status(500).json({ message: `Something went wrong: ${e}` });
+        return res.status(httpStatus.INTERNAL_SERVER_ERROR).json({ message: `Something went wrong: ${e.message || e}` });
     }
 };
 
@@ -46,15 +54,23 @@ const login = async (req, res) => {
 const register = async (req, res) => {
     const { name, username, password } = req.body;
 
+    if (!name || !username || !password) {
+        return res.status(httpStatus.BAD_REQUEST).json({ message: "Please provide name, username, and password" });
+    }
+
     try {
-        const { data: existingUser } = await supabase
+        const { data: existingUser, error: checkError } = await supabase
             .from("users")
             .select("id")
             .eq("username", username)
-            .single();
+            .maybeSingle();
+
+        if (checkError) {
+            return res.status(httpStatus.INTERNAL_SERVER_ERROR).json({ message: checkError.message });
+        }
 
         if (existingUser) {
-            return res.status(httpStatus.FOUND).json({ message: "User already exists" });
+            return res.status(httpStatus.CONFLICT).json({ message: "User already exists" });
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);
@@ -68,7 +84,7 @@ const register = async (req, res) => {
         return res.status(httpStatus.CREATED).json({ message: "User Registered" });
 
     } catch (e) {
-        return res.json({ message: `Something went wrong: ${e}` });
+        return res.status(httpStatus.INTERNAL_SERVER_ERROR).json({ message: `Something went wrong: ${e.message || e}` });
     }
 };
 
@@ -76,12 +92,16 @@ const register = async (req, res) => {
 const getUserHistory = async (req, res) => {
     const { token } = req.query;
 
+    if (!token) {
+        return res.status(httpStatus.UNAUTHORIZED).json({ message: "Token is required" });
+    }
+
     try {
         const { data: user, error: userError } = await supabase
             .from("users")
             .select("username")
             .eq("token", token)
-            .single();
+            .maybeSingle();
 
         if (userError || !user) {
             return res.status(httpStatus.UNAUTHORIZED).json({ message: "Invalid token" });
@@ -95,10 +115,10 @@ const getUserHistory = async (req, res) => {
 
         if (meetingsError) throw meetingsError;
 
-        return res.json(meetings);
+        return res.status(httpStatus.OK).json(meetings || []);
 
     } catch (e) {
-        return res.json({ message: `Something went wrong: ${e}` });
+        return res.status(httpStatus.INTERNAL_SERVER_ERROR).json({ message: `Something went wrong: ${e.message || e}` });
     }
 };
 
@@ -106,12 +126,16 @@ const getUserHistory = async (req, res) => {
 const addToHistory = async (req, res) => {
     const { token, meeting_code, transcript } = req.body;
 
+    if (!token || !meeting_code) {
+        return res.status(httpStatus.BAD_REQUEST).json({ message: "Token and meeting code are required" });
+    }
+
     try {
         const { data: user, error: userError } = await supabase
             .from("users")
             .select("username")
             .eq("token", token)
-            .single();
+            .maybeSingle();
 
         if (userError || !user) {
             return res.status(httpStatus.UNAUTHORIZED).json({ message: "Invalid token" });
@@ -130,7 +154,7 @@ const addToHistory = async (req, res) => {
         return res.status(httpStatus.CREATED).json({ message: "Added to history" });
 
     } catch (e) {
-        return res.json({ message: `Something went wrong: ${e}` });
+        return res.status(httpStatus.INTERNAL_SERVER_ERROR).json({ message: `Something went wrong: ${e.message || e}` });
     }
 };
 
