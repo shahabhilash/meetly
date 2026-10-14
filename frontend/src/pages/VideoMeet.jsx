@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useContext, useEffect, useRef, useState } from 'react'
 import io from "socket.io-client";
 import { Badge, IconButton, TextField } from '@mui/material';
 import { Button } from '@mui/material';
@@ -11,7 +11,9 @@ import MicOffIcon from '@mui/icons-material/MicOff'
 import ScreenShareIcon from '@mui/icons-material/ScreenShare';
 import StopScreenShareIcon from '@mui/icons-material/StopScreenShare'
 import ChatIcon from '@mui/icons-material/Chat'
+import ArticleIcon from '@mui/icons-material/Article';
 import server from '../environment';
+import { AuthContext } from '../contexts/AuthContext';
 
 const server_url = server;
 
@@ -24,6 +26,8 @@ const peerConfigConnections = {
 }
 
 export default function VideoMeetComponent() {
+
+    const { addToUserHistory } = useContext(AuthContext);
 
     var socketRef = useRef();
     let socketIdRef = useRef();
@@ -53,6 +57,12 @@ export default function VideoMeetComponent() {
     let [askForUsername, setAskForUsername] = useState(true);
 
     let [username, setUsername] = useState("");
+
+    // ── Transcript state ──────────────────────────────────────────
+    let [transcript, setTranscript] = useState([]);        // [{speaker, text, time}]
+    let [showTranscript, setShowTranscript] = useState(false);
+    let recognitionRef = useRef(null);
+    // ─────────────────────────────────────────────────────────────
 
     const videoRef = useRef([])
 
@@ -400,11 +410,75 @@ export default function VideoMeetComponent() {
         setScreen(!screen);
     }
 
-    let handleEndCall = () => {
+    // ── Transcript helpers ────────────────────────────────────────
+    let startTranscription = (speakerName) => {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) return; // not supported (Firefox)
+
+        const recognition = new SpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = false;
+        recognition.lang = 'en-US';
+
+        recognition.onresult = (event) => {
+            const lastResult = event.results[event.results.length - 1];
+            if (lastResult.isFinal) {
+                const text = lastResult[0].transcript.trim();
+                const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                setTranscript(prev => [...prev, { speaker: speakerName, text, time }]);
+            }
+        };
+
+        recognition.onerror = (e) => {
+            // Restart on non-fatal errors
+            if (e.error !== 'not-allowed' && e.error !== 'service-not-allowed') {
+                recognition.start();
+            }
+        };
+
+        recognition.start();
+        recognitionRef.current = recognition;
+    };
+
+    let stopTranscription = () => {
+        if (recognitionRef.current) {
+            recognitionRef.current.stop();
+            recognitionRef.current = null;
+        }
+    };
+
+    let downloadTranscript = () => {
+        const content = transcript
+            .map(l => `[${l.time}] ${l.speaker}: ${l.text}`)
+            .join('\n');
+        const blob = new Blob([content], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `meetly-transcript-${new Date().toISOString().slice(0, 10)}.txt`;
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+    // ─────────────────────────────────────────────────────────────
+
+    let handleEndCall = async () => {
+        stopTranscription();
         try {
             let tracks = localVideoref.current.srcObject.getTracks()
             tracks.forEach(track => track.stop())
         } catch (e) { }
+
+        // Save transcript to history if user is logged in
+        try {
+            const meetingCode = window.location.pathname.split('/').pop();
+            const transcriptText = transcript
+                .map(l => `[${l.time}] ${l.speaker}: ${l.text}`)
+                .join('\n');
+            await addToUserHistory(meetingCode, transcriptText);
+        } catch (e) {
+            // Guest user or not logged in — skip silently
+        }
+
         window.location.href = "/"
     }
 
@@ -443,6 +517,7 @@ export default function VideoMeetComponent() {
     let connect = () => {
         setAskForUsername(false);
         getMedia();
+        startTranscription(username || 'You');
     }
 
 
@@ -520,7 +595,43 @@ export default function VideoMeetComponent() {
                                 <ChatIcon />                        </IconButton>
                         </Badge>
 
+                        <Badge badgeContent={transcript.length} max={999} color='secondary'>
+                            <IconButton onClick={() => setShowTranscript(!showTranscript)} style={{ color: "white" }} title="Live Transcript">
+                                <ArticleIcon />
+                            </IconButton>
+                        </Badge>
+
                     </div>
+
+                    {/* ── Live Transcript Panel ─────────────────────────────── */}
+                    {showTranscript && (
+                        <div style={{
+                            position: 'absolute', right: 0, top: 0, width: '320px',
+                            height: '100%', background: 'rgba(15,15,15,0.95)',
+                            display: 'flex', flexDirection: 'column', zIndex: 10,
+                            borderLeft: '1px solid #333'
+                        }}>
+                            <div style={{ padding: '16px', borderBottom: '1px solid #333', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <h3 style={{ color: '#fff', margin: 0, fontSize: '16px' }}>📝 Live Transcript</h3>
+                                <Button size="small" variant="outlined" onClick={downloadTranscript}
+                                    style={{ color: '#90caf9', borderColor: '#90caf9', fontSize: '11px' }}>
+                                    Download
+                                </Button>
+                            </div>
+                            <div style={{ flex: 1, overflowY: 'auto', padding: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                {transcript.length === 0
+                                    ? <p style={{ color: '#888', fontSize: '13px', textAlign: 'center', marginTop: '40px' }}>🎤 Transcript will appear here as you speak...</p>
+                                    : transcript.map((line, i) => (
+                                        <div key={i} style={{ background: '#1e1e1e', borderRadius: '8px', padding: '8px 10px' }}>
+                                            <span style={{ color: '#90caf9', fontSize: '11px', fontWeight: 600 }}>{line.speaker}</span>
+                                            <span style={{ color: '#aaa', fontSize: '10px', marginLeft: '8px' }}>{line.time}</span>
+                                            <p style={{ color: '#e0e0e0', margin: '4px 0 0', fontSize: '13px', lineHeight: 1.4 }}>{line.text}</p>
+                                        </div>
+                                    ))
+                                }
+                            </div>
+                        </div>
+                    )}
 
 
                     <video className={styles.meetUserVideo} ref={localVideoref} autoPlay muted></video>
